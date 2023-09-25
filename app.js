@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const session = require('express-session');
 const cookieParser = require('cookie-parser')
 const csurf = require('csurf');
@@ -18,14 +19,19 @@ app.get('/', (req, res) => {
   res.render('index', { csrfToken: req.csrfToken() });
 });
 
-app.post('/login', (req, res) => {
-  // Validate and authenticate the user
-  // Implement appropriate validation and secure authentication mechanisms here
-  // For simplicity, you can use a hardcoded username and password for demonstration purposes
+app.post('/login',[
+body('username').notEmpty().trim().espace(),
+body('password').notEmpty().isLenght({ min: 6}),
+], (req, res) => {
+  const errors = validationResult(req);
+  if(!errors.isEmpty()){
+    return res.status(400).json({ errors: errors.array() });
+  }
 
   const { username, password } = req.body;
 
-  if (username === 'admin' && password === 'password') {
+  const user = mockUsers.find((user) => user.username === username);
+  if (user && bcrypt.compareSync(password, user.passwordHash)) {
     req.session.isAuthenticated = true;
     res.redirect('/dashboard');
   } else {
@@ -33,7 +39,7 @@ app.post('/login', (req, res) => {
   }
 });
 
-app.get('/dashboard', (req, res) => {
+app.get('/dashboard', isAuthenticated, (req, res) => {
   // Secure the dashboard route to only allow authenticated users
   if (req.session.isAuthenticated) {
     res.render('dashboard');
